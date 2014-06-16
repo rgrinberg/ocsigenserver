@@ -18,6 +18,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *)
 
+let section = Lwt_log.Section.make "ocsipersist:sqlite"
 
 (** Module Ocsipersist: persistent data *)
 
@@ -64,7 +65,7 @@ let rec bind_safely stmt = function
 
 let close_safely db =
  if not (db_close db) then
-   ignore (Ocsigen_messages.errlog "Couldn't close database")
+   Lwt_log.ign_error ~section "Couldn't close database"
 
 let m = Mutex.create ()
 
@@ -327,13 +328,12 @@ let init config =
   );
   (* We check that we can access the database *)
   try Lwt_unix.run (exec_safely (fun _ -> ()))
-  with e ->
-    Ocsigen_messages.errlog
-      (Printf.sprintf
-         "Error opening database file '%s' when registering Ocsipersist. \
-          Check that the directory exists, and that Ocsigen has enough \
-          rights" !db_file);
-    raise e
+  with exn ->
+    Lwt_log.ign_error_f ~section ~exn
+      "Error opening database file '%s' when registering Ocsipersist. \
+       Check that the directory exists, and that Ocsigen has enough \
+       rights" !db_file;
+    raise exn
 
 
 let _ = Ocsigen_extensions.register_extension

@@ -29,6 +29,8 @@ the operation on this protocol*)
 open Ocsigen_stream
 open Ocsigen_cookies
 
+let section = Lwt_log.Section.make "ocsigen:http_frame"
+
 type etag = string
 
 
@@ -81,14 +83,14 @@ module Result = struct
        etag: string option;
        code: int; (** HTTP code, if not 200 *)
        stream: string Ocsigen_stream.t *
-         (string Ocsigen_stream.t -> 
-            int64 -> 
+         (string Ocsigen_stream.t ->
+            int64 ->
               string Ocsigen_stream.step Lwt.t) option
-       ; (** Default: empty stream. 
+       ; (** Default: empty stream.
              The second field is (optionaly)
-             the function used to skip a part of the 
+             the function used to skip a part of the
              stream, if you do not you want to use
-             a basic reading of the stream. 
+             a basic reading of the stream.
              For example, for static files, you can optimize it by using
              a [seek] function.
          *)
@@ -120,7 +122,7 @@ module Result = struct
      (* No date => proxies use etag *)
      etag = None;
      code = 200;
-     stream = (Ocsigen_stream.make (fun () -> Ocsigen_stream.empty None), 
+     stream = (Ocsigen_stream.make (fun () -> Ocsigen_stream.empty None),
                    None);
      content_length = Some 0L;
      content_type = None;
@@ -160,7 +162,7 @@ module Result = struct
      lastmodified = None;
      etag = None;
      code = 204; (* No content *)
-     stream = (Ocsigen_stream.make (fun () -> Ocsigen_stream.empty None), 
+     stream = (Ocsigen_stream.make (fun () -> Ocsigen_stream.empty None),
                    None);
      content_length = Some 0L;
      content_type = None;
@@ -316,14 +318,11 @@ module Http_error =
         let display_http_exception e =
           match e with
           | Http_exception (n, Some s, Some _) ->
-              Ocsigen_messages.debug
-                (fun () -> Format.sprintf "%s: %s (with headers)" (expl_of_code n) s)
+            Lwt_log.ign_info_f ~section "%s: %s (with headers)" (expl_of_code n) s
           | Http_exception (n, Some s, None) ->
-              Ocsigen_messages.debug
-                (fun () -> Format.sprintf "%s: %s" (expl_of_code n) s)
+            Lwt_log.ign_info_f ~section "%s: %s" (expl_of_code n) s
           | Http_exception (n, None, _) ->
-              Ocsigen_messages.debug
-                (fun () -> Format.sprintf "%s" (expl_of_code n))
+            Lwt_log.ign_info ~section (expl_of_code n)
           | _ ->
               raise e
 

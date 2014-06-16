@@ -38,6 +38,7 @@ open Lwt
 open Ocsigen_extensions
 open Simplexmlparser
 
+let section = Lwt_log.Section.make "redirectmod"
 
 
 (*****************************************************************************)
@@ -58,7 +59,7 @@ let gen dir = function
       catch
         (* Is it a redirection? *)
         (fun () ->
-           Ocsigen_messages.debug2 "--Redirectmod: Is it a redirection?";
+           Lwt_log.ign_info ~section "Is it a redirection?";
            let Regexp (regexp, dest, full, temp) = dir in
            let redir =
              let fi full =
@@ -80,11 +81,10 @@ let gen dir = function
                    try fi false
                    with Ocsigen_extensions.Not_concerned -> fi true
            in
-           Ocsigen_messages.debug
-             (fun () ->
-                "--Redirectmod: YES! "^
-                  (if temp then "Temporary " else "Permanent ")^
-                  "redirection to: "^redir);
+           Lwt_log.ign_info_f ~section
+             "YES! %s redirection to: %s"
+             (if temp then "Temporary " else "Permanent ")
+             redir;
            let empty_result = Ocsigen_http_frame.Result.empty () in
            return
              (Ext_found

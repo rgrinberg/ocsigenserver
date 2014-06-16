@@ -25,7 +25,7 @@ open Ocsigen_http_com
 open Lwt
 open Ocsigen_stream
 
-
+let section = Lwt_log.Section.make "ocsigen:sender"
 
 (*****************************************************************************)
 (** this module instantiate the HTTP_CONTENT signature for an Xhtml content*)
@@ -179,8 +179,7 @@ module Streamlist_content =
                  next (Ocsigen_stream.get stream) l)
               (fun e -> exnhandler e l)
       and exnhandler e l =
-        Ocsigen_messages.warning
-          ("Error while reading stream list: " ^ Printexc.to_string e);
+        Lwt_log.ign_warning ~section ~exn:e "Error while reading stream list";
         finalize `Failure >>= fun () ->
         next_stream l
       in
@@ -227,7 +226,7 @@ module File_content =
       | None -> Ocsigen_config.get_filebuffersize ()
       | Some s -> s
       in
-      Ocsigen_messages.debug2 "start reading file (file opened)";
+      Lwt_log.ign_info ~section "start reading file (file opened)";
       let buf = String.create buffer_size in
       let rec read_aux () =
           Lwt_unix.read fd buf 0 buffer_size >>= fun read ->
@@ -278,12 +277,13 @@ module File_content =
                 (Ocsigen_stream.make
                    ~finalize:
                    (fun _ ->
-                      Ocsigen_messages.debug2 "closing file";
-                      Lwt_unix.close fd)
+                     Lwt_log.ign_info ~section "closing file";
+                     Lwt_unix.close fd)
                    stream,
                  Some (skip fd)) ())
         with e -> Lwt_unix.close fd >>= fun () -> raise e
-      with e -> Ocsigen_messages.debug2 (Printexc.to_string e);  fail e
+        with e -> Lwt_log.ign_info ~section ~exn:e "Exc";
+          fail e
 
   end
 

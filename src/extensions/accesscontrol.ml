@@ -36,6 +36,7 @@ open Simplexmlparser
 open Ocsigen_http_frame
 
 
+let section = Lwt_log.Section.make "access-control"
 
 (*****************************************************************************)
 (* Parsing a condition *)
@@ -58,13 +59,13 @@ let rec parse_condition = function
             (Lazy.force (Ocsigen_request_info.remote_ip_parsed ri)) prefix
            in
            if r then
-             Ocsigen_messages.debug2
-              (sprintf "--Access control (ip): %s matches %s"
-                 (Ocsigen_request_info.remote_ip ri) s)
+             Lwt_log.ign_info_f ~section
+               "IP: %a matches %s"
+               (fun () -> Ocsigen_request_info.remote_ip) ri s
            else
-             Ocsigen_messages.debug2
-              (sprintf "--Access control (ip): %s does not match %s"
-                 (Ocsigen_request_info.remote_ip ri) s);
+             Lwt_log.ign_info_f ~section
+               "IP: %a does not match %s"
+               (fun () -> Ocsigen_request_info.remote_ip) ri s;
            r)
     | Element ("ip" as s, _, _) -> badconfig "Bad syntax for tag %s" s
 
@@ -78,12 +79,13 @@ let rec parse_condition = function
         (fun ri ->
            let r = Ocsigen_request_info.server_port ri = port in
            if r then
-             Ocsigen_messages.debug2
-               (sprintf "--Access control (port): %d accepted" port)
+             Lwt_log.ign_info_f ~section
+               "PORT: %d accepted" port
            else
-             Ocsigen_messages.debug2
-               (sprintf "--Access control (port): %d not accepted (%d expected)"
-                (Ocsigen_request_info.server_port ri) port);
+             Lwt_log.ign_info_f ~section
+               "PORT: %a not accepted (%d expected)"
+               (fun () ri -> string_of_int (Ocsigen_request_info.server_port ri))
+               ri port;
            r)
     | Element ("port" as s, _, _) -> badconfig "Bad syntax for tag %s" s
 
@@ -91,9 +93,9 @@ let rec parse_condition = function
         (fun ri ->
            let r = Ocsigen_request_info.ssl ri in
            if r then
-             Ocsigen_messages.debug2 "--Access control (ssl): accepted"
+             Lwt_log.ign_info ~section "SSL: accepted"
            else
-             Ocsigen_messages.debug2 "--Access control (ssl): not accepted";
+             Lwt_log.ign_info ~section "SSL: not accepted";
            r)
     | Element ("ssl" as s, _, _) -> badconfig "Bad syntax for tag %s" s
 
@@ -109,7 +111,8 @@ let rec parse_condition = function
              List.exists
                (fun a ->
                   let r = Netstring_pcre.string_match regexp a 0 <> None in
-                  if r then Ocsigen_messages.debug2 (sprintf "--Access control (header): header %s matches \"%s\"" name reg);
+                  if r then
+                    Lwt_log.ign_info_f "HEADER: header %s matches %S" name reg;
                   r)
                (try
                   (Http_headers.find_all
@@ -120,7 +123,8 @@ let rec parse_condition = function
                 with
                   | Not_found -> [])
            in
-           if not r then Ocsigen_messages.debug2 (sprintf "--Access control (header): header %s does not match \"%s\"" name reg);
+           if not r
+           then Lwt_log.ign_info_f "HEADER: header %s does not match %S" name reg;
            r)
     | Element ("header" as s, _, _) -> badconfig "Bad syntax for tag %s" s
 
@@ -133,12 +137,14 @@ let rec parse_condition = function
         in
         (fun ri ->
            let r = meth = Ocsigen_request_info.meth ri in
-           if r then Ocsigen_messages.debug
-             (fun () -> sprintf "--Access control (method): %s matches %s"
-              (Framepp.string_of_method (Ocsigen_request_info.meth ri)) s)
-           else Ocsigen_messages.debug
-             (fun () -> sprintf "--Access control (method): %s does not match %s"
-              (Framepp.string_of_method (Ocsigen_request_info.meth ri)) s);
+           if r then
+             Lwt_log.ign_info_f ~section
+               "METHOD: %a matches %s"
+               (fun () ri -> Framepp.string_of_method (Ocsigen_request_info.meth ri)) ri s
+           else
+             Lwt_log.ign_info_f ~section
+               "METHOD: %a does not match %s"
+              (fun () ri -> Framepp.string_of_method (Ocsigen_request_info.meth ri)) ri s;
            r)
     | Element ("method" as s, _, _) -> badconfig "Bad syntax for tag %s" s
 
@@ -151,12 +157,14 @@ let rec parse_condition = function
         in
         (fun ri ->
            let r = pr = Ocsigen_request_info.protocol ri in
-           if r then Ocsigen_messages.debug
-             (fun () -> sprintf "--Access control (protocol): %s matches %s"
-              (Framepp.string_of_proto (Ocsigen_request_info.protocol ri)) s)
-           else Ocsigen_messages.debug
-             (fun () -> sprintf "--Access control (protocol): %s does not match %s"
-              (Framepp.string_of_proto (Ocsigen_request_info.protocol ri)) s);
+           if r then
+             Lwt_log.ign_info_f ~section
+               "PROTOCOL: %a matches %s"
+              (fun () ri -> Framepp.string_of_proto (Ocsigen_request_info.protocol ri)) ri s
+           else
+             Lwt_log.ign_info_f ~section
+               "PROTOCOL: %a does not match %s"
+               (fun () ri -> Framepp.string_of_proto (Ocsigen_request_info.protocol ri)) ri s;
            r)
     | Element ("protocol" as s, _, _) -> badconfig "Bad syntax for tag %s" s
 
@@ -172,12 +180,14 @@ let rec parse_condition = function
              Netstring_pcre.string_match
                regexp (Ocsigen_request_info.sub_path_string ri) 0 <> None
            in
-           if r then Ocsigen_messages.debug
-             (fun () -> sprintf "--Access control (path): \"%s\" matches \"%s\""
-              (Ocsigen_request_info.sub_path_string ri) s)
-           else Ocsigen_messages.debug
-               (fun () -> sprintf "--Access control (path): \"%s\" does not match \"%s\""
-                (Ocsigen_request_info.sub_path_string ri) s);
+           if r then
+             Lwt_log.ign_info_f ~section
+               "PATH: \"%a\" matches %S"
+               (fun () ri -> Ocsigen_request_info.sub_path_string ri) ri s
+           else
+             Lwt_log.ign_info_f ~section
+               "PATH: \"%a\" does not match %S"
+               (fun () ri -> Ocsigen_request_info.sub_path_string ri) ri s;
            r)
     | Element ("path" as s, _, _) -> badconfig "Bad syntax for tag %s" s
 
@@ -226,11 +236,11 @@ let parse_config parse_fun = function
         | Ocsigen_extensions.Req_not_found (_, ri) ->
             Lwt.return
               (if condition ri.request_info then begin
-                 Ocsigen_messages.debug2 "--Access control: => going into <then> branch";
-                 Ocsigen_extensions.Ext_sub_result ithen
+                  Lwt_log.ign_info ~section "COND: going into <then> branch";
+                  Ocsigen_extensions.Ext_sub_result ithen
                end
                else begin
-                 Ocsigen_messages.debug2 "--Access control: => going into <else> branch, if any";
+                 Lwt_log.ign_info ~section "COND: going into <else> branch, if any";
                  Ocsigen_extensions.Ext_sub_result ielse
                end))
   | Element ("if" as s, _, _) -> badconfig "Bad syntax for tag %s" s
@@ -238,7 +248,7 @@ let parse_config parse_fun = function
 
   | Element ("notfound", [], []) ->
       (fun rs ->
-         Ocsigen_messages.debug2 "--Access control: taking in charge 404";
+        Lwt_log.ign_info ~section "NOT_FOUND: taking in charge 404";
          Lwt.return (Ocsigen_extensions.Ext_stop_all
                        (Ocsigen_cookies.Cookies.empty, 404)))
   | Element ("notfound" as s, _, _) -> badconfig "Bad syntax for tag %s" s
@@ -273,8 +283,8 @@ let parse_config parse_fun = function
   | Element ("stop" as s, _, _) -> badconfig "Bad syntax for tag %s" s
 
   | Element ("forbidden", [], []) ->
-      (fun rs ->
-         Ocsigen_messages.debug2 "--Access control: taking in charge 403";
+    (fun rs ->
+       Lwt_log.ign_info ~section "FORBIDDEN: taking in charge 403";
          Lwt.return (Ocsigen_extensions.Ext_stop_all
                        (Ocsigen_cookies.Cookies.empty, 403)))
   | Element ("forbidden" as s, _, _) -> badconfig "Bad syntax for tag %s" s
@@ -312,16 +322,14 @@ let parse_config parse_fun = function
 
   | Element ("allow-forward-for", param, _) ->
     let apply request code =
-      Ocsigen_messages.debug2 "--Access control: allowed proxy";
+      Lwt_log.ign_info ~section "Allowed proxy";
       let request =
         try
           let header = Http_headers.find Http_headers.x_forwarded_for
             (Ocsigen_request_info.http_frame request.request_info).frame_header.Http_header.headers in
           match Netstring_pcre.split comma_space_regexp header with
             | []
-            | [_] ->
-        Ocsigen_messages.debug2
-          ("--Access control: malformed X-Forwarded-For field: "^header);
+            | [_] -> Lwt_log.ign_info_f ~section "Malformed X-Forwarded-For field: %s" header;
         request
             | original_ip::proxies ->
         let last_proxy = List.last proxies in
@@ -337,7 +345,7 @@ let parse_config parse_fun = function
             badconfig "Bad syntax for argument of tag allow-forward-for" )
             | _ -> badconfig "Bad syntax for argument of tag allow-forward-for"
         in
-        if equal_ip or (not need_equal_ip)
+        if equal_ip || (not need_equal_ip)
         then
           { request with request_info =
               (Ocsigen_request_info.update request.request_info
@@ -345,10 +353,10 @@ let parse_config parse_fun = function
                ~remote_ip_parsed:(lazy (Ipaddr.of_string_exn original_ip))
                ~forward_ip:proxies ()) }
         else (* the announced ip of the proxy is not its real ip *)
-          ( Ocsigen_messages.warning
-          (Printf.sprintf
-            "--Access control: X-Forwarded-For: host ip ( %s ) does not match the header ( %s )"
-            (Ocsigen_request_info.remote_ip request.request_info) header );
+          ( Lwt_log.ign_warning_f ~section
+              "X-Forwarded-For: host ip ( %a ) does not match the header ( %s )"
+              (fun () -> Ocsigen_request_info.remote_ip) request.request_info
+              header;
             request )
         with
           | Not_found -> request
@@ -366,7 +374,7 @@ let parse_config parse_fun = function
 
   | Element ("allow-forward-proto", _, _) ->
     let apply request code =
-      Ocsigen_messages.debug2 "--Access control: allowed proxy for ssl";
+      Lwt_log.ign_info ~section "Allowed proxy for ssl";
       let request =
         try
           let header = Http_headers.find Http_headers.x_forwarded_proto
@@ -382,8 +390,8 @@ let parse_config parse_fun = function
             (Ocsigen_request_info.update request.request_info
               ~ssl:true ()) }
             | _ ->
-        Ocsigen_messages.debug2
-          ("--Access control: malformed X-Forwarded-Proto field: "^header);
+              Lwt_log.ign_info_f ~section
+                "Malformed X-Forwarded-Proto field: %s" header;
         request
         with
           | Not_found -> request

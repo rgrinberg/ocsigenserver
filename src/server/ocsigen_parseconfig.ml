@@ -26,6 +26,8 @@ open Ocsigen_lib
 open Simplexmlparser
 open Ocsigen_config
 
+let section = Lwt_log.Section.make "ocsigen:config"
+
 let blah_of_string f tag s =
   try
     f (String.remove_spaces s 0 ((String.length s) -1))
@@ -46,12 +48,12 @@ let default_default_hostname =
           [Unix.AI_CANONNAME;
            Unix.AI_SOCKTYPE Unix.SOCK_STREAM])).Unix.ai_canonname
   with Failure _ ->
-    let warning =
-      "Cannot determine default host name. Will use \""^hostname^
-        "\" to create absolute links or redirections dynamically if you do not set <host defaulthostname=\"...\" ...> in config file."
-    in
-    Ocsigen_messages.warning warning;
-(*VVV Is it the right behaviour? *)
+    Lwt_log.ign_warning_f ~section
+      "Cannot determine default host name. Will use \"%s\" \
+       to create absolute links or redirections dynamically \
+       if you do not set <host defaulthostname=\"...\" ...> \
+       in config file." hostname;
+    (*VVV Is it the right behaviour? *)
     hostname
 (*****************************************************************************)
 
@@ -184,9 +186,9 @@ let rec parser_config =
         (match ll with
         | [] -> ()
         | _ ->
-            ignore (Ocsigen_messages.warning
-                      "At most one <server> tag possible in config file. \
-                      Ignoring trailing data."));
+          Lwt_log.ign_warning ~section
+            "At most one <server> tag possible in config file. \
+             Ignoring trailing data.");
         parse_servers (n@[nouveau]) [] (* ll *)
         (* Multiple server not supported any more *)
         (* nouveau at the end *)
@@ -276,9 +278,9 @@ let get_defaulthostname ~defaulthostname ~defaulthttpport ~host =
             | _ :: q -> aux q
           in
           let host = aux host in
-          Ocsigen_messages.warning
-            ("While parsing config file, tag <host>: No defaulthostname, \
-              assuming it is \""^host^"\"");
+          Lwt_log.ign_warning_f ~section
+            "While parsing config file, tag <host>: No defaulthostname, \
+             assuming it is \"%s\"" host;
           if correct_hostname host then
              host
           else
@@ -558,13 +560,11 @@ let parse_server isreloading c =
                     let filename = dir^"/"^s in
                     let filecont =
                       try
-                        Ocsigen_messages.debug (fun () -> "Parsing configuration file "^
-                          filename);
+                        Lwt_log.ign_info_f ~section "Parsing configuration file %s" filename;
                         parse_ext filename
                       with e ->
-                        Ocsigen_messages.errlog
-                          ("Error while loading configuration file "^filename^
-                           ": "^(Printexc.to_string e)^" (ignored)");
+                        Lwt_log.ign_error_f ~section ~exn:e
+                          "Error while loading configuration file %s (ignored)" filename;
                         []
                     in
                     (match filecont with
@@ -577,10 +577,9 @@ let parse_server isreloading c =
                 files
             with
             | Sys_error _ as e ->
-                Ocsigen_messages.errlog
-                  ("Error while loading configuration file: "^
-                   ": "^(Printexc.to_string e)^" (ignored)");
-                []
+              Lwt_log.ign_error ~section ~exn:e
+                "Error while loading configuration file (ignored)";
+              []
           in
           one@(parse_server_aux ll)
       | (Element (tag, _, _))::_ ->
@@ -641,7 +640,8 @@ let parse_facility = function
   | "security" -> `Security
   | "syslog" -> `Syslog
   | "uucp" -> `UUCP
-  | "user" -> `User;;
+  | "user" -> `User
+  | _ -> assert false ;;
 
 (* First parsing of config file *)
 let extract_info c =

@@ -44,6 +44,8 @@ open Lwt
 open Ocsigen_extensions
 open Simplexmlparser
 
+let section = Lwt_log.Section.make "revproxy"
+
 exception Bad_answer_from_http_server
 
 
@@ -70,7 +72,7 @@ let gen dir = function
   catch
     (* Is it a redirection? *)
     (fun () ->
-       Ocsigen_messages.debug2 "--Revproxy: Is it a redirection?";
+       Lwt_log.ign_info ~section "Is it a redirection?";
        let dest =
          let ri = ri.request_info in
          let fi full =
@@ -109,11 +111,9 @@ let gen dir = function
                                Printexc.to_string e))
        in
        let uri = "/"^uri in
-       Ocsigen_messages.debug
-         (fun () ->
-            "--Revproxy: YES! Redirection to "^
-              (if https then "https://" else "http://")^host^":"^
-              (string_of_int port)^uri);
+       Lwt_log.ign_info_f ~section
+         "YES! Redirection to http%s://%s:%d%s"
+         (if https then "s" else "") host port uri;
 
        Ip_address.get_inet_addr host >>= fun inet_addr ->
 

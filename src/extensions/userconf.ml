@@ -30,6 +30,7 @@ open Ocsigen_extensions
 
 exception NoConfFile
 
+let section = Lwt_log.Section.make "userconf"
 (*****************************************************************************)
 
 let err_500 =
@@ -39,16 +40,16 @@ let err_500 =
 (* Catch invalid userconf files and report an error *)
 let handle_parsing_error req = function
   | Ocsigen_extensions.Error_in_config_file s ->
-      Ocsigen_messages.errlog (Printf.sprintf
-          "Syntax error in userconf configuration file for url %s: %s"
-        (Ocsigen_request_info.url_string req.request_info) s);
-      Lwt.return err_500
+    Lwt_log.ign_error_f ~section
+      "Syntax error in userconf configuration file for url %s: %s"
+      (Ocsigen_request_info.url_string req.request_info) s;
+    Lwt.return err_500
 
   | Ocsigen_extensions.Error_in_user_config_file s ->
-      Ocsigen_messages.errlog  (Printf.sprintf
-          "Unauthorized option in user configuration for url %s: %s"
-          (Ocsigen_request_info.url_string req.request_info) s);
-      Lwt.return err_500
+    Lwt_log.ign_error_f ~section
+      "Unauthorized option in user configuration for url %s: %s"
+      (Ocsigen_request_info.url_string req.request_info) s;
+    Lwt.return err_500
 
   | e -> Lwt.fail e
 
@@ -115,7 +116,7 @@ let gen hostpattern sitepath (regexp, conf, url, prefix, localpath) = function
       | None -> Lwt.return (Ext_next previous_err)
       | Some _ ->
           try
-            Ocsigen_messages.debug2 "--Userconf: Using user configuration";
+            Lwt_log.ign_info ~section "Using user configuration";
             let conf0 = Ocsigen_extensions.replace_user_dir regexp conf path in
             let url = Netstring_pcre.global_replace regexp url path
             and prefix = Netstring_pcre.global_replace regexp prefix path

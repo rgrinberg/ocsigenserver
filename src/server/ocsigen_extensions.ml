@@ -31,6 +31,8 @@
 
 *)
 
+let section = Lwt_log.Section.make "ocsigen:ext"
+
 open Lwt
 open Ocsigen_lib
 open Ocsigen_cookies
@@ -135,8 +137,7 @@ let do_not_serve_to_regexp d =
         Printf.sprintf "^(%s)$" (paren l)
     in
     (try
-       Ocsigen_messages.debug (fun () -> Printf.sprintf
-                                 "Compiling exclusion regexp %s" regexp);
+       Lwt_log.ign_info_f ~section "Compiling exclusion regexp %s" regexp;
        let r = Netstring_pcre.regexp regexp in
        Hashtbl.add hash_consed_do_not_serve d r;
        r
@@ -463,22 +464,19 @@ let rec default_parse_config
               in
               match site_match oldri path (Ocsigen_request_info.full_path oldri.request_info) with
               | None ->
-                  Ocsigen_messages.debug (fun () ->
-                    "site \""^
-                    (Url.string_of_url_path ~encode:true path)^
-                    "\" does not match url \""^
-                    (Url.string_of_url_path ~encode:true
-                       (Ocsigen_request_info.full_path oldri.request_info))^
-                    "\".");
-                  Lwt.return (Ext_next e, cookies_to_set)
+                Lwt_log.ign_info_f ~section
+                  "site \"%a\" does not match url \"%a\"."
+                  (fun () path  -> Url.string_of_url_path ~encode:true path) path
+                  (fun () oldri -> Url.string_of_url_path ~encode:true
+                      (Ocsigen_request_info.full_path oldri.request_info)) oldri;
+                Lwt.return (Ext_next e, cookies_to_set)
               | Some sub_path ->
-                  Ocsigen_messages.debug (fun () ->
-                    "-------- site found: url \""^
-                    (Url.string_of_url_path ~encode:true
-                       (Ocsigen_request_info.full_path oldri.request_info))^
-                    "\" matches \""^
-                    (Url.string_of_url_path ~encode:true path)^"\".");
-                  let ri = {oldri with
+                Lwt_log.ign_info_f ~section
+                  "site found: url \"%a\" matches \"%a\"."
+                  (fun () oldri -> Url.string_of_url_path ~encode:true
+                      (Ocsigen_request_info.full_path oldri.request_info)) oldri
+                  (fun () path -> Url.string_of_url_path ~encode:true path) path;
+                let ri = {oldri with
                               request_info =
                                 (Ocsigen_request_info.update oldri.request_info
                                     ~sub_path:sub_path
@@ -902,11 +900,11 @@ let compute_result
       | [] -> fail (Ocsigen_http_error (cookies_to_set, prev_err))
       | (h, conf_info, host_function)::l when
           host_match ~virtual_hosts:h ~host ~port ->
-          Ocsigen_messages.debug (fun () ->
-            "-------- host found! "^
-            (string_of_host_option host)^
-            " matches "^(string_of_host h));
-          host_function
+        Lwt_log.ign_info_f ~section
+          "host found! %a matches %a"
+          (fun () -> string_of_host_option) host
+          (fun () -> string_of_host) h;
+        host_function
             awake
             cookies_to_set
             (Req_not_found (prev_err, { request_info = ri;
@@ -949,11 +947,11 @@ let compute_result
               assert false
           )
       | (h, _, _)::l ->
-          Ocsigen_messages.debug (fun () ->
-            "-------- host = "^
-            (string_of_host_option host)^
-            " does not match "^(string_of_host h));
-          aux_host ri prev_err cookies_to_set l
+        Lwt_log.ign_info_f ~section
+          "host = %a does not match %a"
+          (fun () -> string_of_host_option) host
+          (fun () -> string_of_host) h;
+        aux_host ri prev_err cookies_to_set l
     in aux_host ri 404 cookies_to_set sites
   in
   Lwt.finalize
@@ -1020,7 +1018,7 @@ let get_number_of_connected,
       then exit 0;
       if c = !maxr
       then begin
-        Ocsigen_messages.warning "Number of connections now ok";
+        Lwt_log.ign_warning ~section "Number of connections now ok";
         maxr := -1000;
         Lwt_mvar.put mvar ()
       end
@@ -1098,10 +1096,10 @@ let replace_user_dir regexp dest pathstring =
         let u = Netstring_pcre.global_replace regexp u pathstring in
         let s2 = Netstring_pcre.global_replace regexp s2 pathstring in
         let userdir = (Unix.getpwnam u).Unix.pw_dir in
-        Ocsigen_messages.debug (fun () -> "User " ^ u);
+        Lwt_log.ign_info_f ~section "User %s" u;
         s1^userdir^s2
       with Not_found ->
-        Ocsigen_messages.debug (fun () -> "No such user " ^ u);
+        Lwt_log.ign_info_f ~section "No such user %s" u;
         raise NoSuchUser
 
 
