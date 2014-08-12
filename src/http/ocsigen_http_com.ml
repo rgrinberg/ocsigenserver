@@ -741,7 +741,7 @@ let send_100_continue slot =
       proto = H.HTTP11;
       headers = Http_headers.empty
     } in
-  Lwt_log.ign_info ~section "writing 100-continue";
+  Lwt_log.ign_debug ~section "writing 100-continue";
   Lwt_log.ign_debug ~section hh;
   Lwt_chan.output_string out_ch hh
 

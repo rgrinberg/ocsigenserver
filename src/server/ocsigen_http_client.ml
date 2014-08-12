@@ -192,7 +192,7 @@ module FT = struct
         let b, ll = aux l in
         if b then T.replace free_connection_table k ll;
     with Not_found -> ()
-       | exn -> Lwt_log.ign_warning ~exn ~section
+       | exn -> Lwt_log.ign_debug ~exn ~section
                   "exception while removing from connection table"
 
 end
