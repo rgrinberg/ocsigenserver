@@ -90,6 +90,18 @@ let gen regexp continue = function
               | Some g -> (Ocsigen_request_info.sub_path_string ri) ^ "?" ^ g)
          in
          Lwt_log.ign_info_f ~section "YES! rewrite to: %s" redir;
+         if continue
+         then
+           return
+             (Ext_continue_with
+                ({ ri with request_info =
+                             Ocsigen_extensions.ri_of_url
+                               ~full_rewrite:fullrewrite
+                               redir ri.request_info },
+                 Ocsigen_cookies.Cookies.empty,
+                 err)
+             )
+         else
          return
            (Ext_retry_with
               ({ ri with request_info =
