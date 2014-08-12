@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
- *)
+*)
 
 (* FIX: the log file is never reopened *)
 
@@ -27,8 +27,8 @@ open Lwt
 
 let section = Lwt_log.Section.make "ocsipersist:dbm"
 (** Data are divided into stores.
-   Create one store for your project, where you will save all your data.
- *)
+    Create one store for your project, where you will save all your data.
+*)
 type store = string
 
 exception Ocsipersist_error
@@ -43,24 +43,24 @@ open Simplexmlparser
 let rec parse_global_config (store, ocsidbm, delayloading as d) = function
   | [] -> d
   | Element ("delayloading", [("val", ("true" | "1"))], []) :: ll ->
-       parse_global_config (store, ocsidbm, true) ll
+    parse_global_config (store, ocsidbm, true) ll
 
   | Element ("store", [("dir", s)], []) :: ll ->
-      if store = None then
-        parse_global_config ((Some s), ocsidbm, delayloading) ll
-      else
-        Ocsigen_extensions.badconfig "Ocsipersist: Duplicate <store> tag"
+    if store = None then
+      parse_global_config ((Some s), ocsidbm, delayloading) ll
+    else
+      Ocsigen_extensions.badconfig "Ocsipersist: Duplicate <store> tag"
 
   | Element ("ocsidbm", [("name", s)], []) :: ll ->
-      if ocsidbm = None then
-        parse_global_config (store, (Some s), delayloading) ll
-      else
-        Ocsigen_extensions.badconfig "Ocsipersist: Duplicate <ocsidbm> tag"
+    if ocsidbm = None then
+      parse_global_config (store, (Some s), delayloading) ll
+    else
+      Ocsigen_extensions.badconfig "Ocsipersist: Duplicate <ocsidbm> tag"
 
   | (Element (s,_,_))::ll -> Ocsigen_extensions.badconfig "Bad tag %s" s
 
   | _ -> Ocsigen_extensions.badconfig
-      "Unexpected content inside Ocsipersist config"
+           "Unexpected content inside Ocsipersist config"
 
 let (directory, ocsidbm) =
   (ref ((Ocsigen_config.get_datadir ())^"/ocsipersist"),
@@ -75,61 +75,61 @@ external sys_exit : int -> 'a = "caml_sys_exit"
 let rec try_connect sname =
   catch
     (fun () ->
-      let socket = Lwt_unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
-      Lwt_unix.connect socket (Unix.ADDR_UNIX sname) >>= fun () ->
-      return socket)
+       let socket = Lwt_unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
+       Lwt_unix.connect socket (Unix.ADDR_UNIX sname) >>= fun () ->
+       return socket)
     (fun _ ->
        Lwt_log.ign_warning_f ~section
          "Launching a new Ocsidbm process: %s on directory %s." !ocsidbm !directory;
-      let param = [|!ocsidbm; !directory|] in
-      let child () =
-        let log =
-          Unix.openfile (Ocsigen_messages.error_log_path ())
-            [Unix.O_WRONLY; Unix.O_CREAT; Unix.O_APPEND] 0o640 in
-        Unix.dup2 log Unix.stderr;
-        Unix.close log;
-        let devnull = Unix.openfile "/dev/null" [Unix.O_WRONLY] 0 in
-        Unix.dup2 devnull Unix.stdout;
-        Unix.close devnull;
-        Unix.close Unix.stdin;
-        Unix.execv !ocsidbm param
-      in
-      let pid = Lwt_unix.fork () in
-      if pid = 0
-      then begin (* double fork *)
-        if Lwt_unix.fork () = 0
-        then begin
-          child ()
-        end
-        else sys_exit 0;
-      end
-      else
-        Lwt_unix.waitpid [] pid >>=
-        (fun _ ->  Lwt_unix.sleep 1.1 >>=
-          (fun () ->
-            let socket = Lwt_unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
-            Lwt_unix.connect socket (Unix.ADDR_UNIX sname) >>= fun () ->
-            return socket)))
+       let param = [|!ocsidbm; !directory|] in
+       let child () =
+         let log =
+           Unix.openfile (Ocsigen_messages.error_log_path ())
+             [Unix.O_WRONLY; Unix.O_CREAT; Unix.O_APPEND] 0o640 in
+         Unix.dup2 log Unix.stderr;
+         Unix.close log;
+         let devnull = Unix.openfile "/dev/null" [Unix.O_WRONLY] 0 in
+         Unix.dup2 devnull Unix.stdout;
+         Unix.close devnull;
+         Unix.close Unix.stdin;
+         Unix.execv !ocsidbm param
+       in
+       let pid = Lwt_unix.fork () in
+       if pid = 0
+       then begin (* double fork *)
+         if Lwt_unix.fork () = 0
+         then begin
+           child ()
+         end
+         else sys_exit 0;
+       end
+       else
+         Lwt_unix.waitpid [] pid >>=
+         (fun _ ->  Lwt_unix.sleep 1.1 >>=
+           (fun () ->
+              let socket = Lwt_unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
+              Lwt_unix.connect socket (Unix.ADDR_UNIX sname) >>= fun () ->
+              return socket)))
 
 let rec get_indescr i =
   (catch
      (fun () -> try_connect (!directory^"/"^socketname))
      (fun e ->
-       if i = 0
-       then begin
-         Lwt_log.ign_error_f ~section
-           "Cannot connect to Ocsidbm. Will continue \
-            without persistent session support. \
-            Error message is: %s .\
-            Have a look at the logs to see if there is an \
-            error message from the Ocsidbm process."
-           (match e with
-            | Unix.Unix_error (a,b,c) ->
-              Printf.sprintf "%a in %s(%s)" (fun () -> Unix.error_message) a b c
-            | _ -> Printexc.to_string e);
-         fail e
-       end
-       else (Lwt_unix.sleep 2.1) >>= (fun () -> get_indescr (i-1))))
+        if i = 0
+        then begin
+          Lwt_log.ign_error_f ~section
+            "Cannot connect to Ocsidbm. Will continue \
+             without persistent session support. \
+             Error message is: %s .\
+             Have a look at the logs to see if there is an \
+             error message from the Ocsidbm process."
+            (match e with
+             | Unix.Unix_error (a,b,c) ->
+               Printf.sprintf "%a in %s(%s)" (fun () -> Unix.error_message) a b c
+             | _ -> Printexc.to_string e);
+          fail e
+        end
+        else (Lwt_unix.sleep 2.1) >>= (fun () -> get_indescr (i-1))))
 
 let inch = ref (Lwt.fail (Failure "Ocsipersist not initalised"))
 let outch = ref (Lwt.fail (Failure "Ocsipersist not initalised"))
@@ -139,16 +139,16 @@ let init_fun config =
     parse_global_config (None, None, false) config
   in
   (match store with
-     | None -> ()
-     | Some d -> directory := d);
+   | None -> ()
+   | Some d -> directory := d);
   (match ocsidbmconf with
-     | None -> ()
-     | Some d -> ocsidbm := d);
+   | None -> ()
+   | Some d -> ocsidbm := d);
 
   (if delay_loading then
-       Lwt_log.ign_warning ~section "Asynchronuous initialization (may fail later)"
-     else
-       Lwt_log.ign_warning ~section "Initializing ...");
+     Lwt_log.ign_warning ~section "Asynchronuous initialization (may fail later)"
+   else
+     Lwt_log.ign_warning ~section "Initializing ...");
   let indescr = get_indescr 2 in
   if delay_loading then (
     inch  := (indescr >>= fun r -> return (Lwt_chan.in_channel_of_descr r));
@@ -168,13 +168,13 @@ let send =
       (fun () -> !previous)
       (fun _ -> return Ok) >>=
     (fun _ ->
-      !inch >>= fun inch ->
-      !outch >>= fun outch ->
-      previous :=
-        (Lwt_chan.output_value outch v >>= fun () ->
-         Lwt_chan.flush outch >>= fun () ->
-         Lwt_chan.input_value inch);
-      !previous)
+       !inch >>= fun inch ->
+       !outch >>= fun outch ->
+       previous :=
+         (Lwt_chan.output_value outch v >>= fun () ->
+          Lwt_chan.flush outch >>= fun () ->
+          Lwt_chan.input_value inch);
+       !previous)
 
 let db_get (store, name) =
   send (Get (store, name)) >>=
@@ -245,10 +245,10 @@ let make_persistent_lazy_lwt ~store ~name ~default =
      (fun () -> db_get pvname >>= (fun _ -> return ()))
      (function
        | Not_found ->
-           default () >>= fun def ->
-           db_replace pvname (Marshal.to_string def [])
+         default () >>= fun def ->
+         db_replace pvname (Marshal.to_string def [])
        | e -> fail e)) >>=
-   (fun () -> return pvname)
+  (fun () -> return pvname)
 
 let make_persistent_lazy ~store ~name ~default =
   let default () = Lwt.wrap default in
@@ -306,7 +306,7 @@ let fold_table f table beg =
     (function
       | None -> return beg
       | Some k -> find table k >>= fun r ->
-          f k r beg >>= (fun res -> aux db_nextkey res))
+        f k r beg >>= (fun res -> aux db_nextkey res))
   in
   aux db_firstkey beg
 
@@ -315,13 +315,13 @@ let fold_step = fold_table
 let iter_block a b = failwith "iter_block not implemented for DBM. Please use Ocsipersist with sqlite"
 
 (* iterator: with a separate connexion:
-exception Exn1
-let iter_table f table =
-  let first = Marshal.to_string (Firstkey table) [] in
-  let firstl = String.length first in
-  let next = Marshal.to_string (Nextkey table) [] in
-  let nextl = String.length next in
-  (Lwt_unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 >>=
+   exception Exn1
+   let iter_table f table =
+   let first = Marshal.to_string (Firstkey table) [] in
+   let firstl = String.length first in
+   let next = Marshal.to_string (Nextkey table) [] in
+   let nextl = String.length next in
+   (Lwt_unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 >>=
    (fun socket ->
      Lwt_unix.connect
        (Lwt_unix.Plain socket)

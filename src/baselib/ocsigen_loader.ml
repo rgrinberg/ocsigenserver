@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
- *)
+*)
 
 open Ocsigen_lib
 
@@ -33,8 +33,8 @@ let translate =
   if Ocsigen_config.is_native then
     fun filename ->
       if Filename.check_suffix filename ".cmo" ||
-        Filename.check_suffix filename ".cma" then
-          (Filename.chop_extension filename) ^ ".cmxs"
+         Filename.check_suffix filename ".cma" then
+        (Filename.chop_extension filename) ^ ".cmxs"
       else filename
   else
     fun filename ->
@@ -59,7 +59,7 @@ let init_functions = ref M.empty
 
 let get_init_on_load, set_init_on_load =
   let init_on_load = ref false in
-    ((fun () -> !init_on_load), (fun b -> init_on_load := b))
+  ((fun () -> !init_on_load), (fun b -> init_on_load := b))
 
 let loadfile pre post force file =
   let file = translate file in
@@ -68,25 +68,25 @@ let loadfile pre post force file =
       pre ();
       Lwt_log.ign_info_f ~section "Loading %s (will be reloaded every times)" file;
       begin try
-        Dynlink_wrapper.loadfile file; post ()
-      with e ->
-        post (); raise e
+          Dynlink_wrapper.loadfile file; post ()
+        with e ->
+          post (); raise e
       end
     end
     else if not (isloaded file) then begin
       pre ();
       Lwt_log.ign_info_f ~section "Loading extension %s" file;
       begin try
-        Dynlink_wrapper.loadfile file; post ()
-      with e ->
-        post (); raise e
+          Dynlink_wrapper.loadfile file; post ()
+        with e ->
+          post (); raise e
       end;
       addloaded file;
     end
     else
       Lwt_log.ign_info_f ~section "Extension %s already loaded" file
   with
-    | e -> raise (Dynlink_error (file, e))
+  | e -> raise (Dynlink_error (file, e))
 
 
 let id () = ()
@@ -116,25 +116,25 @@ let init_module pre post force name =
       pre ();
       Lwt_log.ign_info_f ~section "Initializing %s (will be initialized every time)" name;
       begin try
-        f (); post ()
-      with e ->
-        post (); raise e
+          f (); post ()
+        with e ->
+          post (); raise e
       end
     end
     else if not (isloaded name) then begin
       pre ();
       Lwt_log.ign_info_f ~section "Initializing module %s " name;
       begin try
-        f (); post ()
-      with e ->
-        post (); raise e
+          f (); post ()
+        with e ->
+          post (); raise e
       end;
       addloaded name;
     end
     else
       Lwt_log.ign_info_f ~section "Module %s already initialized." name
   with
-    | e -> raise (Dynlink_error (name, e))
+  | e -> raise (Dynlink_error (name, e))
 
 
 (************************************************************************)
@@ -145,8 +145,8 @@ let ocsigen_search_path = ref []
 
 let update_search_path () =
   match !ocsigen_search_path with
-    | [] -> Findlib.init ()
-    | x -> Findlib.init ~env_ocamlpath:(String.concat ":" x) ()
+  | [] -> Findlib.init ()
+  | x -> Findlib.init ~env_ocamlpath:(String.concat ":" x) ()
 
 let get_ocamlpath = Findlib.search_path
 
@@ -169,29 +169,29 @@ let findfiles =
       let preds = [(if Ocsigen_config.is_native then "native" else "byte"); "plugin"; "mt"] in
       let deps = Findlib.package_deep_ancestors preds [package] in
       let deps = List.filter
-        (fun a -> not (String.Set.mem a Ocsigen_config.builtin_packages)) deps in
+          (fun a -> not (String.Set.mem a Ocsigen_config.builtin_packages)) deps in
       Lwt_log.ign_info_f ~section
         "Dependencies of %s: %s" package (String.concat ", " deps);
       let rec aux = function
         | [] -> []
         | a::q ->
-            let mods =
-              try
-                let raw = Findlib.package_property preds a "archive" in
-                (* Replacing .cmx/.cmxa by .cmxs *)
-                let raw = Netstring_pcre.global_replace cmx ".cmxs " raw in
-                List.filter ((<>) "") (String.split ~multisep:true ' ' raw)
-              with
-                | Not_found -> []
-            in
-            let base = Findlib.package_directory a in
-            (List.map (Findlib.resolve_path ~base) mods) @ (aux q)
+          let mods =
+            try
+              let raw = Findlib.package_property preds a "archive" in
+              (* Replacing .cmx/.cmxa by .cmxs *)
+              let raw = Netstring_pcre.global_replace cmx ".cmxs " raw in
+              List.filter ((<>) "") (String.split ~multisep:true ' ' raw)
+            with
+            | Not_found -> []
+          in
+          let base = Findlib.package_directory a in
+          (List.map (Findlib.resolve_path ~base) mods) @ (aux q)
       in
       let res = aux deps in
       Lwt_log.ign_info_f ~section "Needed: %s" (String.concat ", " res);
       res
     with
-      | e -> raise (Findlib_error (package, e))
+    | e -> raise (Findlib_error (package, e))
 
 
 (************************************************************************)
@@ -200,11 +200,11 @@ let findfiles =
 open Printf
 
 let () = Printexc.register_exn_printer
-  (fun f_rec -> function
-     | Dynlink_wrapper.Error e -> Dynlink_wrapper.error_message e
-     | Dynlink_error (s, e) ->
+    (fun f_rec -> function
+       | Dynlink_wrapper.Error e -> Dynlink_wrapper.error_message e
+       | Dynlink_error (s, e) ->
          sprintf "Dynlink error while loading %s: %s" s (f_rec e)
-     | Findlib_error (s, Fl_package_base.No_such_package (s', msg)) ->
+       | Findlib_error (s, Fl_package_base.No_such_package (s', msg)) ->
          let pkg =
            if s = s' then s else sprintf "%s [while trying to load %s]" s' s
          in
@@ -212,5 +212,5 @@ let () = Printexc.register_exn_printer
          sprintf
            "Findlib package %s not found%s: maybe you forgot <findlib path=\"...\"/>?"
            pkg additional
-     | Findlib_error (s, e) -> sprintf "Findlib error while handling %s: %s" s (f_rec e)
-     | e -> raise e)
+       | Findlib_error (s, e) -> sprintf "Findlib error while handling %s: %s" s (f_rec e)
+       | e -> raise e)

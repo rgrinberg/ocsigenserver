@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
- *)
+*)
 open Ocsigen_extensions
 
 (* Displaying of a local file or directory. Currently used in
@@ -29,7 +29,7 @@ exception NotReadableDirectory
 
 (* Policies for following symlinks *)
 type symlink_policy =
-    stat:Unix.LargeFile.stats -> lstat:Unix.LargeFile.stats -> bool
+  stat:Unix.LargeFile.stats -> lstat:Unix.LargeFile.stats -> bool
 
 let never_follow_symlinks : symlink_policy =
   fun ~stat ~lstat -> false
@@ -90,9 +90,9 @@ let check_symlinks ~no_check_for ~filename policy =
       check_symlinks_parent_directories filename no_check_for policy
   in
   match policy with
-    | AlwaysFollowSymlinks -> true
-    | DoNotFollowSymlinks -> aux never_follow_symlinks
-    | FollowSymlinksIfOwnerMatch -> aux follow_symlinks_if_owner_match
+  | AlwaysFollowSymlinks -> true
+  | DoNotFollowSymlinks -> aux never_follow_symlinks
+  | FollowSymlinksIfOwnerMatch -> aux follow_symlinks_if_owner_match
 
 let check_dotdot =
   let regexp = Netstring_pcre.regexp "(/\\.\\./)|(/\\.\\.$)" in
@@ -115,9 +115,9 @@ let can_send filename request =
     Lwt_log.ign_info ~section "this file is forbidden";
     raise Failed_403)
   else
-    if matches request.do_not_serve_404 then (
-      Lwt_log.ign_info ~section "this file must be hidden";
-      raise Failed_404)
+  if matches request.do_not_serve_404 then (
+    Lwt_log.ign_info ~section "this file must be hidden";
+    raise Failed_404)
 
 
 (* Return type of a request for a local file. The string argument
@@ -168,21 +168,21 @@ let resolve ?no_check_for ~request ~filename () =
         else
           let rec find_index = function
             | [] ->
-                (* No suitable index, we try to list the directory *)
-                if request.request_config.list_directory_content then (
-                  Lwt_log.ign_info ~section "Displaying directory content";
-                  (filename, stat))
-                else (
-                  (* No suitable index *)
-                  Lwt_log.ign_info ~section "No index and no listing";
-                  raise NotReadableDirectory)
+              (* No suitable index, we try to list the directory *)
+              if request.request_config.list_directory_content then (
+                Lwt_log.ign_info ~section "Displaying directory content";
+                (filename, stat))
+              else (
+                (* No suitable index *)
+                Lwt_log.ign_info ~section "No index and no listing";
+                raise NotReadableDirectory)
             | e :: q ->
-                let index = filename ^ e in
-                Lwt_log.ign_info_f ~section "Testing \"%s\" as possible index." index;
-                try
-                  (index, Unix.LargeFile.stat index)
-                with
-                  | Unix.Unix_error (Unix.ENOENT, _, _) -> find_index q
+              let index = filename ^ e in
+              Lwt_log.ign_info_f ~section "Testing \"%s\" as possible index." index;
+              try
+                (index, Unix.LargeFile.stat index)
+              with
+              | Unix.Unix_error (Unix.ENOENT, _, _) -> find_index q
           in find_index request.request_config.default_directory_index
 
       else (filename, stat)
@@ -192,12 +192,12 @@ let resolve ?no_check_for ~request ~filename () =
       (Lwt_log.ign_info_f ~section "Filenames cannot contain .. as in \"%s\"." filename;
        raise Failed_403)
     else if check_symlinks ~filename ~no_check_for
-      request.request_config.follow_symlinks
+        request.request_config.follow_symlinks
     then (
-        can_send filename request.request_config;
+      can_send filename request.request_config;
       (* If the previous function did not fail, we are authorized to
          send this file *)
-        Lwt_log.ign_info_f ~section "Returning \"%s\"." filename;
+      Lwt_log.ign_info_f ~section "Returning \"%s\"." filename;
       if stat.Unix.LargeFile.st_kind = Unix.S_REG then
         RFile filename
       else if stat.Unix.LargeFile.st_kind = Unix.S_DIR then
@@ -210,24 +210,24 @@ let resolve ?no_check_for ~request ~filename () =
       Lwt_log.ign_info_f ~section "Failed symlink check for \"%s\"." filename;
       raise Failed_403)
   with
-    (* We can get an EACCESS here, if are missing some rights on a directory *)
-    | Unix.Unix_error (Unix.EACCES,_,_) -> raise Failed_403
-    | Unix.Unix_error (Unix.ENOENT,_,_) -> raise Failed_404
+  (* We can get an EACCESS here, if are missing some rights on a directory *)
+  | Unix.Unix_error (Unix.EACCES,_,_) -> raise Failed_403
+  | Unix.Unix_error (Unix.ENOENT,_,_) -> raise Failed_404
 
 
 (* Given a local file or directory, we retrieve its content *)
 let content ~request ~file =
   try
     match file with
-      | RDir dirname ->
-          Ocsigen_senders.Directory_content.result_of_content
-            (dirname, Ocsigen_request_info.full_path request.request_info)
-      | RFile filename ->
-          Ocsigen_senders.File_content.result_of_content
-            (filename,
-             request.request_config.charset_assoc,
-             request.request_config.mime_assoc
-            )
+    | RDir dirname ->
+      Ocsigen_senders.Directory_content.result_of_content
+        (dirname, Ocsigen_request_info.full_path request.request_info)
+    | RFile filename ->
+      Ocsigen_senders.File_content.result_of_content
+        (filename,
+         request.request_config.charset_assoc,
+         request.request_config.mime_assoc
+        )
 
   with
-    | Unix.Unix_error (Unix.EACCES,_,_) -> raise Failed_403
+  | Unix.Unix_error (Unix.EACCES,_,_) -> raise Failed_403
