@@ -23,7 +23,7 @@
 open Ocsigen_lib
 open Lwt
 
-let section = Lwt_log.Section.make "cors"
+let section = Lwt_log.Section.make "ocsigen:ext:cors"
 
 (*** MAIN FUNCTION ***)
 

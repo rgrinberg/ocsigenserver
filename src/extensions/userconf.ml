@@ -30,7 +30,7 @@ open Ocsigen_extensions
 
 exception NoConfFile
 
-let section = Lwt_log.Section.make "userconf"
+let section = Lwt_log.Section.make "ocsigen:ext:userconf"
 (*****************************************************************************)
 
 let err_500 =

@@ -46,7 +46,7 @@ open Lwt
 open Ocsigen_extensions
 open Simplexmlparser
 
-let section = Lwt_log.Section.make "rewritemod"
+let section = Lwt_log.Section.make "ocsigen:ext:rewritemod"
 
 exception Not_concerned
 

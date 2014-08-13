@@ -41,7 +41,7 @@ open Ocsigen_lib
 open Ocsigen_http_frame
 open Ocsigen_cookies
 
-let section = Lwt_log.Section.make "ocsigen:http_com"
+let section = Lwt_log.Section.make "ocsigen:http:com"
 
 (** this module provide a mecanism to communicate with some http frames *)
 

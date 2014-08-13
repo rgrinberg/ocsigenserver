@@ -27,7 +27,7 @@ open Lwt
 open Ocsigen_lib
 open Ocsigen_extensions
 
-let section = Lwt_log.Section.make "staticmod"
+let section = Lwt_log.Section.make "ocsigen:ext:staticmod"
 exception Not_concerned
 
 let bad_config s = raise (Error_in_config_file s)

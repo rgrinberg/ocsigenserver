@@ -38,7 +38,7 @@ open Lwt
 open Ocsigen_extensions
 open Simplexmlparser
 
-let section = Lwt_log.Section.make "redirectmod"
+let section = Lwt_log.Section.make "ocsigen:ext:redirectmod"
 
 
 (*****************************************************************************)

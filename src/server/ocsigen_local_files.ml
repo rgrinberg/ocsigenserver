@@ -21,7 +21,7 @@ open Ocsigen_extensions
 (* Displaying of a local file or directory. Currently used in
    staticmod and eliom_predefmod*)
 
-let section = Lwt_log.Section.make "local-file"
+let section = Lwt_log.Section.make "ocsigen:local-file"
 exception Failed_403
 exception Failed_404
 exception NotReadableDirectory

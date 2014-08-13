@@ -28,7 +28,7 @@ open Ocsigen_extensions
 open Simplexmlparser
 open Ocsigen_headers
 
-let section = Lwt_log.Section.make "deflate"
+let section = Lwt_log.Section.make "ocsigen:ext:deflate"
 
 (* Content-type *)
 type filter = Type of string option * string option | Extension of string

@@ -44,7 +44,7 @@ open Lwt
 open Ocsigen_extensions
 open Simplexmlparser
 
-let section = Lwt_log.Section.make "revproxy"
+let section = Lwt_log.Section.make "ocsigen:ext:revproxy"
 
 exception Bad_answer_from_http_server
 

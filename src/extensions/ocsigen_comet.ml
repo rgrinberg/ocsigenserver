@@ -30,7 +30,7 @@
 
 open Ocsigen_lib
 
-let section = Lwt_log.Section.make "comet"
+let section = Lwt_log.Section.make "ocsigen:ext:comet"
 (*** PREAMBLE ***)
 
 (* infix monad binders *)

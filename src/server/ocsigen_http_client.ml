@@ -72,7 +72,7 @@
 *)
 
 open Ocsigen_lib
-let section = Lwt_log.Section.make "ocsigen:http-client"
+let section = Lwt_log.Section.make "ocsigen:http:client"
 (* constants. Should be configurable *)
 let max_free_open_connections = 10
 

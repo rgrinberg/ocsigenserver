@@ -33,7 +33,7 @@ open Ocsigen_http_frame
 open Ocsigen_http_com
 open Ocsigen_senders
 
-let section = Lwt_log.Section.make "cgimod"
+let section = Lwt_log.Section.make "ocsigen:ext:cgimod"
 
 module Regexp = Netstring_pcre
 

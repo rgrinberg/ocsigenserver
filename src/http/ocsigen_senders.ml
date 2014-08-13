@@ -25,7 +25,7 @@ open Ocsigen_http_com
 open Lwt
 open Ocsigen_stream
 
-let section = Lwt_log.Section.make "ocsigen:sender"
+let section = Lwt_log.Section.make "ocsigen:http:sender"
 
 (*****************************************************************************)
 (** this module instantiate the HTTP_CONTENT signature for an Xhtml content*)

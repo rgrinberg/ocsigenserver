@@ -36,7 +36,7 @@ open Simplexmlparser
 open Ocsigen_http_frame
 
 
-let section = Lwt_log.Section.make "access-control"
+let section = Lwt_log.Section.make "ocsigen:ext:access-control"
 
 (*****************************************************************************)
 (* Parsing a condition *)

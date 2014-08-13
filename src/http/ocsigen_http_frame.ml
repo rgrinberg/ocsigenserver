@@ -29,7 +29,7 @@ open Ocsigen_lib
 open Ocsigen_stream
 open Ocsigen_cookies
 
-let section = Lwt_log.Section.make "ocsigen:http_frame"
+let section = Lwt_log.Section.make "ocsigen:http:frame"
 
 type etag = string
 
