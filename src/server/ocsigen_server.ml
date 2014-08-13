@@ -122,7 +122,7 @@ let warn sockaddr s =
     (fun () sockaddr ->
        Unix.string_of_inet_addr (ip_of_sockaddr sockaddr)) sockaddr s
 let dbg sockaddr s =
-  Lwt_log.ign_debug_f ~section "While talking to %a:%s"
+  Lwt_log.ign_info_f ~section "While talking to %a:%s"
     (fun () sockaddr ->
        Unix.string_of_inet_addr (ip_of_sockaddr sockaddr)) sockaddr s
 
